@@ -1,150 +1,186 @@
 package com.example.provault.files
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.provider.OpenableColumns
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBox
-import androidx.compose.material.icons.filled.AddCircle
-import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Lock
- import androidx.compose.material3.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
-
-import com.example.provault.ConnectRoute
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okio.IOException
+import org.json.JSONObject
+import java.io.File
 
 @Composable
-fun FileUploaderScreen(
-    navController: NavController,
-    viewModel: FileViewModel
-) {
+fun UploadAndRetrieve() {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var fileUri by remember { mutableStateOf<Uri?>(null) }
+    var uploadedFiles by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) } // store file names and URLs
+
+    // JWT token for Piñata API
+    val jwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4YjczZmNmZS01YmYyLTRhODUtOGU4NC1mOTA1YTJhMzE4NDQiLCJlbWFpbCI6ImNoYW5kYW5iaG9waTE2MDdAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjU1OTI2NmJiNWJiODFjZjVlYzFiIiwic2NvcGVkS2V5U2VjcmV0IjoiZWJlYmU4MGNmMjIxM2ZkNDI1ZDYxYmVjZDgwMTgyM2ZjZjUyMWI3NjQ3MWJjMjkxZDUzOTMwMGE1ZWRlNmE4NSIsImV4cCI6MTc2MTI5NjcxOH0.4kKwOxqhioZ5K2Gm67gq5t2SNAmSuW8kIH7_NvBXWjY"
+
+    // File picker
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
         onResult = { uri ->
-            uri?.let {
-                viewModel.uploadFile(uri)
-                Toast.makeText(context, "File Uploaded Successfully", Toast.LENGTH_SHORT).show()
-            }
+            fileUri = uri
         }
     )
 
-    Scaffold(
-        floatingActionButton = {
-            FloatingActionButton(onClick = {
-                filePickerLauncher.launch("*/*") // You can specify a specific MIME type like "image/*"
-            }) {
-                Icon(Icons.Default.AddCircle, contentDescription = "Upload File")
-            }
-        },
-        bottomBar = {
-            BottomAppBar {
-                Row(modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    IconButton(
-                        onClick = {
-                            navController.navigate("profile")
-                        }
-
-                    ) {
-                        Icon(Icons.Default.AccountBox, contentDescription = "Profile")
-                    }
-                    IconButton(onClick = { navController.navigate(ConnectRoute) }
-                    ) {
-                        Icon(Icons.Default.Call, contentDescription = "Profile")
-                    }
-                }
-
-            }
-
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            FileGrid(viewModel = viewModel, navController = navController)
+    // Trigger file retrieval on startup
+    LaunchedEffect(Unit) {
+        retrieveFilesFromPinata(jwt, scope) { files ->
+            uploadedFiles = files
         }
     }
-}
 
-@Composable
-fun FileGrid(viewModel: FileViewModel, navController: NavController) {
-    val fileItems by viewModel.fileItems.collectAsState()
-
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        items(fileItems) { fileItem ->
-            FileItemView(fileItem, navController)
-        }
-    }
-}
-
-@Composable
-fun FileItemView(fileItem: FileItem, navController: NavController) {
+    // UI Elements
     Column(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(8.dp)
-            .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline))
-            .clickable {
-                openFile(fileItem.uri, navController.context)
-            },
-        horizontalAlignment = Alignment.CenterHorizontally
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
-        FilePreview(uri = fileItem.uri)
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = fileItem.name,
-            modifier = Modifier.padding(8.dp),
-            style = MaterialTheme.typography.bodySmall
-        )
+        // Button to select file
+        Button(onClick = { filePickerLauncher.launch("*/*") }) {
+            Text("Select File")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Upload button if file is selected
+        fileUri?.let { uri ->
+            val file = uriToFile(uri, context)
+            file?.let {
+                Button(onClick = { uploadFileToPinata(it, jwt, scope) }) {
+                    Text("Upload to Pinata")
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Display Grid of uploaded files
+        if (uploadedFiles.isNotEmpty()) {
+            LazyVerticalGrid(columns = GridCells.Fixed(2)) {
+                items(uploadedFiles.size) { index ->
+                    val (fileName, fileUrl) = uploadedFiles[index]
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .padding(8.dp)
+                            .clickable {
+                                openFile(context, fileUrl) // Open the file when clicked
+                            }
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(Icons.Default.Lock, contentDescription = "File Icon")
+                            BasicText(text = fileName)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+fun uploadFileToPinata(file: File, jwt: String, scope: CoroutineScope) {
+    val client = OkHttpClient()
+    val formBody = MultipartBody.Builder()
+        .setType(MultipartBody.FORM)
+        .addFormDataPart("file", file.name, RequestBody.create("text/plain".toMediaTypeOrNull(), file))
+        .addFormDataPart("pinataMetadata", "{\"name\":\"${file.name}\"}") // Set file name in metadata
+        .build()
+
+    val request = Request.Builder()
+        .url("https://api.pinata.cloud/pinning/pinFileToIPFS")
+        .addHeader("Authorization", "Bearer $jwt")
+        .post(formBody)
+        .build()
+
+    scope.launch(Dispatchers.IO) {
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                e.printStackTrace()
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                if (response.isSuccessful) {
+                    println("File uploaded successfully")
+                } else {
+                    println("Upload failed: ${response.message}")
+                }
+            }
+        })
     }
 }
 
-@Composable
-fun FilePreview(uri: Uri) {
-    // Replace with the appropriate icon for file preview
-    val icon: ImageVector = Icons.Default.Lock
+fun retrieveFilesFromPinata(jwt: String, scope: CoroutineScope, onSuccess: (List<Pair<String, String>>) -> Unit) {
+    val client = OkHttpClient()
+    val request = Request.Builder()
+        .url("https://api.pinata.cloud/data/pinList?pageLimit=10&pageOffset=0&status=pinned")
+        .addHeader("Authorization", "Bearer $jwt")
+        .build()
 
-    Icon(
-        imageVector = icon,
-        contentDescription = "File Icon",
-        modifier = Modifier
-            .size(80.dp)
-            .padding(8.dp)
-    )
+    scope.launch(Dispatchers.IO) {
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                e.printStackTrace()
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                if (response.isSuccessful) {
+                    val responseBody = response.body?.string()
+                    val jsonResponse = JSONObject(responseBody ?: "")
+                    val items = jsonResponse.getJSONArray("rows")
+                    val files = mutableListOf<Pair<String, String>>()
+                    for (i in 0 until items.length()) {
+                        val item = items.getJSONObject(i)
+                        val fileName = item.getJSONObject("metadata").getString("name")
+                        val ipfsHash = item.getString("ipfs_pin_hash")
+                        val fileUrl = "https://gateway.pinata.cloud/ipfs/$ipfsHash"
+                        files.add(Pair(fileName, fileUrl))
+                    }
+                    // Post the result on the main thread
+                    scope.launch(Dispatchers.Main) {
+                        onSuccess(files)
+                    }
+                } else {
+                    println("Failed to retrieve files: ${response.message}")
+                }
+            }
+        })
+    }
+}
+fun uriToFile(uri: Uri, context: Context): File? {
+    val inputStream = context.contentResolver.openInputStream(uri)
+    val file = File(context.cacheDir, "tempFile")
+    file.outputStream().use { inputStream?.copyTo(it) }
+    return file
 }
 
-fun openFile(uri: Uri, context: android.content.Context) {
-    val intent = Intent(Intent.ACTION_VIEW).apply {
-        setDataAndType(uri, context.contentResolver.getType(uri))
-        flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
-    }
-    context.startActivity(Intent.createChooser(intent, "Open with"))
+fun openFile(context: Context, fileUrl: String) {
+    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(fileUrl))
+    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    context.startActivity(intent)
 }

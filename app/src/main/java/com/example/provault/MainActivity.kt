@@ -29,8 +29,8 @@ import com.example.provault.UserDB.ProjectListScreen
 import com.example.provault.Video.CallState
 import com.example.provault.Video.VideoCallScreen
 import com.example.provault.Video.VideoCallViewModel
-import com.example.provault.files.FileUploaderScreen
-import com.example.provault.files.FileViewModel
+import com.example.provault.files.UploadAndRetrieve
+
 import com.example.provault.presentation.profile.ProfileScreen
 import com.example.provault.presentation.sign_in.GoogleAuthUiClient
 import com.example.provault.presentation.sign_in.SignInScreen
@@ -42,9 +42,15 @@ import com.google.firebase.firestore.firestore
 import io.getstream.video.android.compose.theme.VideoTheme
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
+import okhttp3.OkHttpClient
 import org.koin.androidx.compose.koinViewModel
 
 class MainActivity : AppCompatActivity() {
+
+    private val client = OkHttpClient()
+    private val jwtToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4YjczZmNmZS01YmYyLTRhODUtOGU4NC1mOTA1YTJhMzE4NDQiLCJlbWFpbCI6ImNoYW5kYW5iaG9waTE2MDdAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjU1OTI2NmJiNWJiODFjZjVlYzFiIiwic2NvcGVkS2V5U2VjcmV0IjoiZWJlYmU4MGNmMjIxM2ZkNDI1ZDYxYmVjZDgwMTgyM2ZjZjUyMWI3NjQ3MWJjMjkxZDUzOTMwMGE1ZWRlNmE4NSIsImV4cCI6MTc2MTI5NjcxOH0.4kKwOxqhioZ5K2Gm67gq5t2SNAmSuW8kIH7_NvBXWjY" // Replace with your actual JWT token
+    private val pinataApiUrl = "https://api.pinata.cloud/pinning/pinFileToIPFS"
+    private val pinataRetrieveUrl = "https://api.pinata.cloud/data/pinList"
 
     val db = Firebase.firestore
     var id = UserSession.userId
@@ -80,7 +86,7 @@ class MainActivity : AppCompatActivity() {
 
 
                     val navController = rememberNavController()
-                    NavHost(navController = navController, startDestination = "AI") {
+                    NavHost(navController = navController, startDestination = "projects") {
                         composable("sign_in") {
                             val viewModel = viewModel<SignInViewModel>()
                             val state by viewModel.state.collectAsStateWithLifecycle()
@@ -162,10 +168,7 @@ class MainActivity : AppCompatActivity() {
 
 
                         composable("fileUploader") {
-                            FileUploaderScreen(
-                                viewModel = FileViewModel(),
-                                navController = navController
-                            )
+                            UploadAndRetrieve()
                         }
 
 

@@ -1,50 +1,71 @@
 package com.example.provault.files
 
+import android.content.Context
 import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.google.firebase.storage.FirebaseStorage
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
-
-data class FileItem(val uri: Uri, val name: String)
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.Response
+import okio.IOException
+import java.io.File
 
 class FileViewModel : ViewModel() {
 
-    private val storageRef = FirebaseStorage.getInstance().reference
-    private val _fileItems = MutableStateFlow<List<FileItem>>(emptyList())
-    val fileItems: StateFlow<List<FileItem>> = _fileItems
+    // Function to upload file to Piñata
+    fun uploadFileToPinata(uri: Uri, context: Context) {
+        // Get file path from the URI
+        val file = File(getFilePathFromUri(uri, context))
 
-    init {
-        retrieveFiles()
+        // Upload to Piñata
+        uploadToPinata(file)
     }
 
-    fun uploadFile(uri: Uri) {
-        viewModelScope.launch {
-            try {
-                val fileRef = storageRef.child("uploads/${System.currentTimeMillis()}")
-                fileRef.putFile(uri).await()
-                retrieveFiles()
-            } catch (e: Exception) {
-                // Handle exceptions
-            }
-        }
-    }
+    private fun uploadToPinata(file: File) {
+        val client = OkHttpClient()
+        val mediaType = "multipart/form-data".toMediaTypeOrNull()
 
-    private fun retrieveFiles() {
-        viewModelScope.launch {
-            try {
-                val listResult = storageRef.child("uploads").listAll().await()
-                val fileItemList = listResult.items.map { item ->
-                    val downloadUri = item.downloadUrl.await()
-                    FileItem(downloadUri, item.name)
+        val requestBody = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart(
+                "file",
+                file.name,
+                file.asRequestBody(mediaType)
+            )
+            .build()
+
+        val request = Request.Builder()
+            .url("https://api.pinata.cloud/pinning/pinFileToIPFS")
+            .addHeader("Authorization", "Bearer YOUR_JWT_TOKEN")  // Replace with your Piñata JWT token
+            .post(requestBody)
+            .build()
+
+        client.newCall(request).enqueue(object : okhttp3.Callback {
+            override fun onResponse(call: okhttp3.Call, response: Response) {
+                if (response.isSuccessful) {
+                    println("File uploaded successfully: ${response.body?.string()}")
+                } else {
+                    println("Upload failed: ${response.body?.string()}")
                 }
-                _fileItems.value = fileItemList
-            } catch (e: Exception) {
-                // Handle exceptions
             }
+
+            override fun onFailure(call: okhttp3.Call, e: IOException) {
+                println("Error uploading file: ${e.message}")
+            }
+        })
+    }
+
+    private fun getFilePathFromUri(uri: Uri, context: Context): String {
+        var filePath = ""
+        val cursor = context.contentResolver.query(uri, null, null, null, null)
+        cursor?.use {
+            val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            cursor.moveToFirst()
+            filePath = cursor.getString(nameIndex)
         }
+        return filePath
     }
 }
