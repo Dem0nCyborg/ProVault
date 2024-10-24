@@ -1,4 +1,4 @@
-package com.example.provault.presentaion.sign_in
+package com.example.provault.presentation.sign_in
 
 data class SignInState(
     val isSignInSuccessfull: Boolean = false,

@@ -1,4 +1,4 @@
-package com.example.provault.presentaion.sign_in
+package com.example.provault.presentation.sign_in
 
 import androidx.lifecycle.ViewModel
 import com.example.provault.UserSession

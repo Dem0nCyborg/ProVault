@@ -7,52 +7,52 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Box
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.provault.Biometric.BiometricPromptManager
+import com.example.provault.Biometric.BiometricUI
 import com.example.provault.Connect.ConnectScreen
 import com.example.provault.Connect.ConnectViewModel
 import com.example.provault.UserDB.ProjectListScreen
-import com.example.provault.UserDB.Projects
 import com.example.provault.Video.CallState
 import com.example.provault.Video.VideoCallScreen
 import com.example.provault.Video.VideoCallViewModel
 import com.example.provault.files.FileUploaderScreen
 import com.example.provault.files.FileViewModel
-import com.example.provault.presentaion.profile.ProfileScreen
-import com.example.provault.presentaion.sign_in.GoogleAuthUiClient
-import com.example.provault.presentaion.sign_in.SignInScreen
-import com.example.provault.presentaion.sign_in.SignInViewModel
+import com.example.provault.presentation.profile.ProfileScreen
+import com.example.provault.presentation.sign_in.GoogleAuthUiClient
+import com.example.provault.presentation.sign_in.SignInScreen
+import com.example.provault.presentation.sign_in.SignInViewModel
 import com.example.provault.ui.theme.ProVaultTheme
 import com.google.android.gms.auth.api.identity.Identity
 import com.google.firebase.Firebase
-import com.google.firebase.auth.auth
 import com.google.firebase.firestore.firestore
 import io.getstream.video.android.compose.theme.VideoTheme
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import org.koin.androidx.compose.koinViewModel
 
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
 
     val db = Firebase.firestore
     var id = UserSession.userId
+
+    private val promptManager by lazy {
+        BiometricPromptManager(this)
+    }
+
+
 
     private val googleAuthClient by lazy {
         GoogleAuthUiClient(
@@ -60,6 +60,10 @@ class MainActivity : ComponentActivity() {
             oneTapClient = Identity.getSignInClient(applicationContext)
         )
     }
+
+
+
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -75,28 +79,21 @@ class MainActivity : ComponentActivity() {
 
 
                     val navController = rememberNavController()
-                    NavHost(navController = navController, startDestination = "sign_in") {
+                    NavHost(navController = navController, startDestination = "Biometric") {
                         composable("sign_in") {
                             val viewModel = viewModel<SignInViewModel>()
                             val state by viewModel.state.collectAsStateWithLifecycle()
 
                             LaunchedEffect(key1 = Unit) {
-                                if (googleAuthClient.getSignedInUser() != null) {
+                                if(googleAuthClient.getSignedInUser() != null) {
                                     navController.navigate("projects")
-                                    if (state.isSignInSuccessfull) {
-                                        val firebaseUser = Firebase.auth.currentUser
-                                        if (firebaseUser != null) {
-                                            UserSession.userId = firebaseUser.uid
-                                            val db = Firebase.firestore
-                                        }
-                                    }
                                 }
                             }
 
                             val launcher = rememberLauncherForActivityResult(
                                 contract = ActivityResultContracts.StartIntentSenderForResult(),
                                 onResult = { result ->
-                                    if (result.resultCode == RESULT_OK) {
+                                    if(result.resultCode == RESULT_OK) {
                                         lifecycleScope.launch {
                                             val signInResult = googleAuthClient.signInWithIntent(
                                                 intent = result.data ?: return@launch
@@ -105,17 +102,16 @@ class MainActivity : ComponentActivity() {
                                         }
                                     }
                                 }
-
                             )
 
                             LaunchedEffect(key1 = state.isSignInSuccessfull) {
-                                if (state.isSignInSuccessfull) {
-                                    //viewModel.addUser()
+                                if(state.isSignInSuccessfull) {
                                     Toast.makeText(
                                         applicationContext,
-                                        "Sign in successfull ${UserSession.userId}",
-                                        Toast.LENGTH_SHORT
+                                        "Sign in successful",
+                                        Toast.LENGTH_LONG
                                     ).show()
+
                                     navController.navigate("projects")
                                     viewModel.resetState()
                                 }
@@ -128,14 +124,13 @@ class MainActivity : ComponentActivity() {
                                         val signInIntentSender = googleAuthClient.signIn()
                                         launcher.launch(
                                             IntentSenderRequest.Builder(
-                                                intentSender = signInIntentSender ?: return@launch
+                                                signInIntentSender ?: return@launch
                                             ).build()
                                         )
                                     }
                                 }
                             )
                         }
-
                         composable("profile") {
                             ProfileScreen(userData = googleAuthClient.getSignedInUser(),
                                 onSignOut = {
@@ -153,12 +148,22 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
+                        composable("Biometric"){
+                            BiometricUI(
+                                navController = navController,
+                                promptManager = promptManager
+                            )
+                        }
+
                         composable("fileUploader") {
                             FileUploaderScreen(
                                 viewModel = FileViewModel(),
                                 navController = navController
                             )
                         }
+
+
+
 
 
 

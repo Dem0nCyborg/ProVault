@@ -1,3 +1,4 @@
+
 package com.example.provault.UserDB
 
 import android.content.Context
@@ -56,7 +57,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import com.example.provault.presentaion.sign_in.UserData
+import com.example.provault.presentation.sign_in.UserData
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -65,11 +66,11 @@ fun ProjectListScreen(viewModel : UserDBViewModel = viewModel(),
                       context: Context,
                       navController: NavController,
                       userData: UserData?
-                      ){
+){
 
     val projects by viewModel.projectsList.collectAsStateWithLifecycle()
     var showAlertDialog by remember {
-     mutableStateOf(false)
+        mutableStateOf(false)
     }
 
     var projectId : String by remember {
@@ -90,7 +91,7 @@ fun ProjectListScreen(viewModel : UserDBViewModel = viewModel(),
                 },
                 actions = {
                     IconButton(onClick = {
-                                         navController.navigate("profile")
+                        navController.navigate("profile")
                     },
                         content = {
                             AsyncImage(
@@ -102,7 +103,7 @@ fun ProjectListScreen(viewModel : UserDBViewModel = viewModel(),
                                 contentScale = ContentScale.Crop
                             )
                         }
-                        )
+                    )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(Color.LightGray)
             )
@@ -115,7 +116,7 @@ fun ProjectListScreen(viewModel : UserDBViewModel = viewModel(),
 
 
 
-        ) {
+            ) {
             items(projects){projects->
                 ProjectItem(project = projects){
                     val id = projects.pid
@@ -188,8 +189,8 @@ fun ProjectListScreen(viewModel : UserDBViewModel = viewModel(),
                         }
                     },
                 )
-             }
-            
+            }
+
 
 
 
@@ -228,4 +229,3 @@ fun ProjectItem(project: Projects,onClick : () -> Unit){
     }
 
 }
-
