@@ -20,6 +20,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.provault.AI.PromptUI
 import com.example.provault.Biometric.BiometricPromptManager
 import com.example.provault.Biometric.BiometricUI
 import com.example.provault.Connect.ConnectScreen
@@ -79,7 +80,7 @@ class MainActivity : AppCompatActivity() {
 
 
                     val navController = rememberNavController()
-                    NavHost(navController = navController, startDestination = "Biometric") {
+                    NavHost(navController = navController, startDestination = "AI") {
                         composable("sign_in") {
                             val viewModel = viewModel<SignInViewModel>()
                             val state by viewModel.state.collectAsStateWithLifecycle()
@@ -154,6 +155,11 @@ class MainActivity : AppCompatActivity() {
                                 promptManager = promptManager
                             )
                         }
+
+                        composable("AI"){
+                            PromptUI()
+                        }
+
 
                         composable("fileUploader") {
                             FileUploaderScreen(

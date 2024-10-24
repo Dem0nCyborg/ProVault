@@ -55,14 +55,21 @@ fun ProfileScreen(
             val value = dataSnapshot.getValue(Int::class.java)
             if (value != null) {
                 uidResponse = value.toString()
+                uniqueIDRef.child(uidResponse).setValue(uid.toString())
             }
         }
+
 
         override fun onCancelled(error: DatabaseError) {
             // Failed to read value
 
         }
     })
+
+
+
+
+
 
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -98,10 +105,7 @@ fun ProfileScreen(
                 fontWeight = FontWeight.SemiBold
             )
             Spacer(modifier = Modifier.height(16.dp))
-            uniqueIDRef.child(it).setValue(uid.toString())
-
         }
-
 
 
 

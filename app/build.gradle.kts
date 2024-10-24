@@ -87,6 +87,9 @@ dependencies {
 
     implementation("androidx.biometric:biometric:1.1.0")
 
+    implementation("com.google.ai.client.generativeai:generativeai:0.7.0")
+
+
 
 
 
