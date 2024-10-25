@@ -114,14 +114,12 @@ fun ProjectListScreen(viewModel : UserDBViewModel = viewModel(),
             modifier = Modifier.padding(paddingValues),
             verticalArrangement = Arrangement.Bottom,
 
-
-
             ) {
             items(projects){projects->
                 ProjectItem(project = projects){
                     val id = projects.pid
                     Toast.makeText(context, "Project ID: ${id}", Toast.LENGTH_SHORT).show()
-                    navController.navigate("fileUploader")
+                    navController.navigate("fileUploader/$id")
                 }
             }
         }

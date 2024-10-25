@@ -17,9 +17,11 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.provault.AI.PromptUI
 import com.example.provault.Biometric.BiometricPromptManager
 import com.example.provault.Biometric.BiometricUI
@@ -167,8 +169,14 @@ class MainActivity : AppCompatActivity() {
                         }
 
 
-                        composable("fileUploader") {
-                            UploadAndRetrieve()
+                        composable(
+                            route = "fileUploader/{projectId}", // Define projectId as a path parameter
+                            arguments = listOf(navArgument("projectId") { type = NavType.StringType })
+                        ) { backStackEntry ->
+                            val projectId = backStackEntry.arguments?.getString("projectId")
+                            projectId?.let {
+                                UploadAndRetrieve() // Pass the projectId to the composable
+                            }
                         }
 
 

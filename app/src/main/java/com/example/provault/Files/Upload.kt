@@ -138,7 +138,7 @@ fun uploadFileToPinata(file: File, jwt: String, scope: CoroutineScope) {
 fun retrieveFilesFromPinata(jwt: String, scope: CoroutineScope, onSuccess: (List<Pair<String, String>>) -> Unit) {
     val client = OkHttpClient()
     val request = Request.Builder()
-        .url("https://api.pinata.cloud/data/pinList?pageLimit=10&pageOffset=0&status=pinned")
+        .url("https://api.pinata.cloud/groups/data/pinList")
         .addHeader("Authorization", "Bearer $jwt")
         .build()
 
