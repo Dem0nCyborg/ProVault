@@ -19,6 +19,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.rememberLottieComposition
+import com.example.provault.R
 import com.example.provault.presentation.sign_in.UserData
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.database.DataSnapshot
@@ -32,8 +36,12 @@ import com.google.firebase.ktx.Firebase
 @Composable
 fun ProfileScreen(
     userData: UserData?,
-    onSignOut: () -> Unit
+    onSignOut: () -> Unit,
+    modifier: Modifier
 ) {
+
+    val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.bg))
+    LottieAnimation(composition = composition, modifier.fillMaxHeight(),isPlaying = true, iterations = 10)
 
     var uidResponse by remember {
         mutableStateOf("")
@@ -49,7 +57,7 @@ fun ProfileScreen(
         override fun onDataChange(dataSnapshot: DataSnapshot) {
             if (!dataSnapshot.exists()) {
                 // Generate and store a unique number
-                val uniqueNumber = (14356..99999).random()
+                val uniqueNumber = uid?.take(5)
                 myRef.setValue(uniqueNumber)
             }
             val value = dataSnapshot.getValue(Int::class.java)
@@ -99,7 +107,7 @@ fun ProfileScreen(
 
         uidResponse.let {
             Text(
-                text = "Unique ID: $it",
+                text = "Unique ID: ${uid?.take(5)}",
                 textAlign = TextAlign.Center,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.SemiBold

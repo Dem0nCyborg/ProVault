@@ -22,7 +22,7 @@ class UserDBViewModel : ViewModel() {
     fun getProjectsList() {
 
 
-        db.collection("Users/124453/Projects")
+        db.collection("Projects")
             .addSnapshotListener { value, error ->
                 if (error != null) {
                     return@addSnapshotListener
@@ -36,8 +36,16 @@ class UserDBViewModel : ViewModel() {
             }
 
     fun addProject(project: Projects){
-        db.collection("Users/124453/Projects")
-            .add(project)
+
+        val projectID = project.pid
+        val projectName = project.pname
+
+        val project = hashMapOf(
+            "pid" to projectID,
+            "pname" to projectName
+        )
+        db.collection("Projects").document(projectID.toString()).set(project)
+
     }
 
 

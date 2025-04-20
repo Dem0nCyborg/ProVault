@@ -1,9 +1,9 @@
-package com.example.provault.files
+package com.example.provault.Files
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -12,25 +12,52 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Face
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavHostController
+import com.example.provault.ConnectRoute
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okio.IOException
 import org.json.JSONObject
 import java.io.File
 
+data class BottomNavRail(
+    val title : String,
+    val icon : ImageVector,
+    val route: String
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
-fun UploadAndRetrieve() {
+fun UploadAndRetrieve(
+    navController : NavHostController
+) {
+
+
+
+    val selectedIndex = remember { mutableStateOf(0) }
+    val items = listOf(
+        BottomNavRail("projects", Icons.Default.Lock, "fileUploader"),
+        BottomNavRail("VideoCall", Icons.Default.Face, ""),
+        BottomNavRail("AI Bot", Icons.Default.Search,"AI"),
+        BottomNavRail("AI Bot", Icons.Filled.List, "TODO")
+    )
+
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var fileUri by remember { mutableStateOf<Uri?>(null) }
@@ -46,6 +73,45 @@ fun UploadAndRetrieve() {
             fileUri = uri
         }
     )
+
+    Scaffold(
+        modifier = Modifier.fillMaxWidth(),
+        topBar = {
+            TopAppBar(
+                title = { Text("File Uploader") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.navigate("projects") }) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = "Navigation Icon",
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    titleContentColor = MaterialTheme.colorScheme.primary,
+                )
+            )
+        },
+        bottomBar = {
+            NavigationBar {
+                items.forEachIndexed { index, item ->
+                    NavigationBarItem(
+                        selected = selectedIndex.value == index,
+                        onClick = {if (index != 1){
+                            selectedIndex.value = index
+                            navController.navigate(item.route)}
+                            else{ navController.navigate(ConnectRoute)
+                        }
+                        },
+                        icon = { Icon(item.icon, contentDescription = item.route) }
+                    )
+                }
+            }
+        }
+    ) {
+
+    }
 
     // Trigger file retrieval on startup
     LaunchedEffect(Unit) {
@@ -102,8 +168,17 @@ fun UploadAndRetrieve() {
                 }
             }
         }
-    }
+
+        }
+
+
+
 }
+
+
+
+
+
 fun uploadFileToPinata(file: File, jwt: String, scope: CoroutineScope) {
     val client = OkHttpClient()
     val formBody = MultipartBody.Builder()
@@ -138,7 +213,7 @@ fun uploadFileToPinata(file: File, jwt: String, scope: CoroutineScope) {
 fun retrieveFilesFromPinata(jwt: String, scope: CoroutineScope, onSuccess: (List<Pair<String, String>>) -> Unit) {
     val client = OkHttpClient()
     val request = Request.Builder()
-        .url("https://api.pinata.cloud/groups/data/pinList")
+        .url("https://api.pinata.cloud/data/pinList")
         .addHeader("Authorization", "Bearer $jwt")
         .build()
 

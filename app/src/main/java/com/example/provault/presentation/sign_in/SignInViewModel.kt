@@ -8,6 +8,7 @@ import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.tasks.await
 
 class SignInViewModel : ViewModel(){
 
@@ -25,13 +26,26 @@ class SignInViewModel : ViewModel(){
         _state.update { SignInState() }
     }
 
-    fun addUser() {
+     fun addUser() {
         val firebaseUser = Firebase.auth.currentUser
         if (firebaseUser != null) {
             UserSession.userId = firebaseUser.uid
             val db = Firebase.firestore
-            db.collection("User")
-                .add(UserSession.userId!!)
+
+            val username = firebaseUser.displayName ?: "Unknown"
+            val vpin = firebaseUser.uid.take(5)
+
+            val userData = hashMapOf(
+                "Username" to username,
+                "VPIN" to vpin
+            )
+
+            try {
+                db.collection("Users").document(vpin).set(userData)
+                println("User added to Firestore")
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 

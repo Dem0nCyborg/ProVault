@@ -1,6 +1,7 @@
 [versions]
 accompanistGlide = "0.32.0-alpha"
-agp = "8.3.2"
+agp = "8.9.1"
+coreSplashscreen = "1.0.1"
 kotlin = "1.9.0"
 coreKtx = "1.13.1"
 junit = "4.13.2"
@@ -17,6 +18,7 @@ lifecycleRuntimeComposeAndroid = "2.8.4"
 firebaseDatabase = "21.0.0"
 firebaseFirestoreKtx = "25.0.0"
 firebaseStorage = "21.0.0"
+runtimeLivedata = "1.7.8"
 stream = "0.5.8"
 koin = "3.5.3"
 composeNavigation = "2.8.0-beta01"
@@ -25,6 +27,8 @@ serialization = "1.6.3"
 [libraries]
 accompanist-glide = { module = "com.google.accompanist:accompanist-glide", version.ref = "accompanistGlide" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-core-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "coreSplashscreen" }
+androidx-runtime-livedata = { module = "androidx.compose.runtime:runtime-livedata", version.ref = "runtimeLivedata" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }

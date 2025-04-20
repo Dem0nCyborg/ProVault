@@ -1,12 +1,13 @@
 package com.example.provault
 
+import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -14,25 +15,26 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
 import com.example.provault.AI.PromptUI
 import com.example.provault.Biometric.BiometricPromptManager
 import com.example.provault.Biometric.BiometricUI
 import com.example.provault.Connect.ConnectScreen
 import com.example.provault.Connect.ConnectViewModel
+import com.example.provault.TodoList.TodoList
+import com.example.provault.TodoList.TodoViewModel
 import com.example.provault.UserDB.ProjectListScreen
 import com.example.provault.Video.CallState
 import com.example.provault.Video.VideoCallScreen
 import com.example.provault.Video.VideoCallViewModel
-import com.example.provault.files.UploadAndRetrieve
-
+import com.example.provault.Files.UploadAndRetrieve
 import com.example.provault.presentation.profile.ProfileScreen
 import com.example.provault.presentation.sign_in.GoogleAuthUiClient
 import com.example.provault.presentation.sign_in.SignInScreen
@@ -40,6 +42,7 @@ import com.example.provault.presentation.sign_in.SignInViewModel
 import com.example.provault.ui.theme.ProVaultTheme
 import com.google.android.gms.auth.api.identity.Identity
 import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
 import com.google.firebase.firestore.firestore
 import io.getstream.video.android.compose.theme.VideoTheme
 import kotlinx.coroutines.launch
@@ -74,9 +77,13 @@ class MainActivity : AppCompatActivity() {
 
 
 
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+
+        installSplashScreen()
+        val todoViewModel = ViewModelProvider(this)[TodoViewModel::class.java]
 
         setContent {
             ProVaultTheme {
@@ -88,7 +95,7 @@ class MainActivity : AppCompatActivity() {
 
 
                     val navController = rememberNavController()
-                    NavHost(navController = navController, startDestination = "projects") {
+                    NavHost(navController = navController, startDestination = "Biometric") {
                         composable("sign_in") {
                             val viewModel = viewModel<SignInViewModel>()
                             val state by viewModel.state.collectAsStateWithLifecycle()
@@ -120,6 +127,7 @@ class MainActivity : AppCompatActivity() {
                                         "Sign in successful",
                                         Toast.LENGTH_LONG
                                     ).show()
+                                    viewModel.addUser()
 
                                     navController.navigate("projects")
                                     viewModel.resetState()
@@ -136,6 +144,7 @@ class MainActivity : AppCompatActivity() {
                                                 signInIntentSender ?: return@launch
                                             ).build()
                                         )
+
                                     }
                                 }
                             )
@@ -147,8 +156,11 @@ class MainActivity : AppCompatActivity() {
                                         googleAuthClient.signOut()
                                         navController.navigate("sign_in")
                                     }
-                                })
+                                }, modifier = Modifier.fillMaxSize())
                         }
+
+
+
                         composable("projects") {
                             ProjectListScreen(
                                 context = applicationContext,
@@ -165,22 +177,18 @@ class MainActivity : AppCompatActivity() {
                         }
 
                         composable("AI"){
-                            PromptUI()
+                            PromptUI(navController = navController)
                         }
 
 
-                        composable(
-                            route = "fileUploader/{projectId}", // Define projectId as a path parameter
-                            arguments = listOf(navArgument("projectId") { type = NavType.StringType })
-                        ) { backStackEntry ->
-                            val projectId = backStackEntry.arguments?.getString("projectId")
-                            projectId?.let {
-                                UploadAndRetrieve() // Pass the projectId to the composable
-                            }
+                        composable("fileUploader") {
+                                UploadAndRetrieve(navController=navController)
+
                         }
 
-
-
+                        composable("TODO") {
+                            TodoList(navController = navController,todoViewModel)
+                        }
 
 
 
