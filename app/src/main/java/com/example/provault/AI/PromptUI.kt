@@ -25,7 +25,8 @@ fun PromptUI() {
     // Setup the GenerativeModel
     val generativeModel = GenerativeModel(
         modelName = "gemini-1.5-flash",
-        apiKey = "AIzaSyCUjvYCucJjamkqXlSz0nH6a180RzQos9Y"
+        apiKey = ""  //removed for security reasons
+
     )
 
     Column(
