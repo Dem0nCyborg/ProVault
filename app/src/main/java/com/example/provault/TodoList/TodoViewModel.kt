@@ -16,19 +16,19 @@ class TodoViewModel: ViewModel() {
     val ref = db.getReference("TODO")
 
     fun getTODO() {
-        _todolist.value = TodoManager.getTODO()
+        TodoManager.getTODO { fetchedList ->
+            _todolist.value = fetchedList
+        }
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
     fun addTODO(title : String) {
         TodoManager.addTODO(title)
-        _todolist.value = TodoManager.getTODO()
 
     }
 
     fun deleteTODO(id : Int) {
         TodoManager.deleteTODO(id)
-        _todolist.value = TodoManager.getTODO()
 
     }
 

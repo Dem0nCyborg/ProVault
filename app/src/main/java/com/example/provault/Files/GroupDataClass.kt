@@ -14,3 +14,8 @@ data class Group(
     val is_public: Boolean,
     val created_at: String
 )
+
+data class GroupRequest(
+    val name: String,
+    val is_public: Boolean
+)

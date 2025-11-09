@@ -35,6 +35,7 @@ import com.example.provault.Video.CallState
 import com.example.provault.Video.VideoCallScreen
 import com.example.provault.Video.VideoCallViewModel
 import com.example.provault.Files.UploadAndRetrieve
+import com.example.provault.UserDB.MemberList
 import com.example.provault.presentation.profile.ProfileScreen
 import com.example.provault.presentation.sign_in.GoogleAuthUiClient
 import com.example.provault.presentation.sign_in.SignInScreen
@@ -42,7 +43,6 @@ import com.example.provault.presentation.sign_in.SignInViewModel
 import com.example.provault.ui.theme.ProVaultTheme
 import com.google.android.gms.auth.api.identity.Identity
 import com.google.firebase.Firebase
-import com.google.firebase.auth.auth
 import com.google.firebase.firestore.firestore
 import io.getstream.video.android.compose.theme.VideoTheme
 import kotlinx.coroutines.launch
@@ -129,7 +129,9 @@ class MainActivity : AppCompatActivity() {
                                     ).show()
                                     viewModel.addUser()
 
-                                    navController.navigate("projects")
+                                    navController.navigate("projects"){
+                                        popUpTo(0)
+                                    }
                                     viewModel.resetState()
                                 }
                             }
@@ -149,14 +151,19 @@ class MainActivity : AppCompatActivity() {
                                 }
                             )
                         }
+
+
+
                         composable("profile") {
                             ProfileScreen(userData = googleAuthClient.getSignedInUser(),
                                 onSignOut = {
                                     lifecycleScope.launch {
                                         googleAuthClient.signOut()
-                                        navController.navigate("sign_in")
+                                        navController.navigate("sign_in") {
+                                            popUpTo(0)
+                                        }
                                     }
-                                }, modifier = Modifier.fillMaxSize())
+                                },modifier = Modifier.fillMaxSize(), navController = navController)
                         }
 
 
@@ -188,6 +195,11 @@ class MainActivity : AppCompatActivity() {
 
                         composable("TODO") {
                             TodoList(navController = navController,todoViewModel)
+                        }
+
+                        composable("members") {
+                            val pid = PIDGlobal.selectedProjectId
+                            MemberList(pid = pid.toString(),navController = navController)
                         }
 
 
@@ -242,5 +254,7 @@ data object ConnectRoute
 
 @Serializable
 data object VideoCallRoute
+
+
 
 

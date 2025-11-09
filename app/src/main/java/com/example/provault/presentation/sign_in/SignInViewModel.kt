@@ -1,6 +1,7 @@
 package com.example.provault.presentation.sign_in
 
 import androidx.lifecycle.ViewModel
+import com.example.provault.PIDGlobal
 import com.example.provault.UserSession
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
@@ -34,6 +35,7 @@ class SignInViewModel : ViewModel(){
 
             val username = firebaseUser.displayName ?: "Unknown"
             val vpin = firebaseUser.uid.take(5)
+            PIDGlobal.currentUserVPIN = vpin
 
             val userData = hashMapOf(
                 "Username" to username,

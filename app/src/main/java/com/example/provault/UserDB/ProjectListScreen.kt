@@ -1,11 +1,13 @@
 
 package com.example.provault.UserDB
 
+import android.app.Activity
 import android.content.Context
 import android.graphics.drawable.Icon
 import android.graphics.drawable.shapes.OvalShape
 import android.provider.CalendarContract.Colors
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -26,6 +28,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -47,6 +50,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshContainer
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -69,8 +74,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.example.provault.PIDGlobal
 import com.example.provault.R
 import com.example.provault.presentation.sign_in.UserData
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -81,7 +91,42 @@ fun ProjectListScreen(viewModel : UserDBViewModel = viewModel(),
                       userData: UserData?
 ){
 
+    var showExitDialog by remember { mutableStateOf(false) }
+
+    // Intercept back press
+    BackHandler {
+        showExitDialog = true
+    }
+
+    if (showExitDialog) {
+        AlertDialog(
+            onDismissRequest = { showExitDialog = false },
+            title = { Text("Exit App") },
+            text = { Text("Are you sure you want to exit ProVault?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showExitDialog = false
+                    // Gracefully finish the app
+                    (context as? Activity)?.finishAffinity()
+                }) {
+                    Text("Exit")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showExitDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    val refreshState = rememberPullToRefreshState()
+    val isRefreshing by remember { mutableStateOf(false) }
+
     val projects by viewModel.projectsList.collectAsStateWithLifecycle()
+
+    val db = Firebase.firestore
+
     var showAlertDialog by remember {
         mutableStateOf(false)
     }
@@ -91,6 +136,7 @@ fun ProjectListScreen(viewModel : UserDBViewModel = viewModel(),
     var projectName : String by remember {
         mutableStateOf("")
     }
+
 
 
 
@@ -128,9 +174,12 @@ fun ProjectListScreen(viewModel : UserDBViewModel = viewModel(),
 
             ) {
             items(projects){projects->
-                ProjectItem(context ,navController,project = projects){
+                ProjectItem(viewModel,context ,navController,project = projects){
                     val id = projects.pid
+                    val name = projects.pname
                     Toast.makeText(context, "Project ID: ${id}", Toast.LENGTH_SHORT).show()
+                    PIDGlobal.selectedProjectId = id.toString()
+                    PIDGlobal.selectedProjectName= name
                     navController.navigate("fileUploader")
                 }
             }
@@ -214,22 +263,13 @@ fun ProjectListScreen(viewModel : UserDBViewModel = viewModel(),
                 )
             }
 
-
-
-
-
         }
-
-
-
 
     }
 
 }
-
-
 @Composable
-fun ProjectItem(context: Context,navController: NavController, project: Projects, onClick : () -> Unit){
+fun ProjectItem(viewModel: UserDBViewModel,context: Context,navController: NavController, project: Projects, onClick : () -> Unit){
 
     var showEditingOptions by remember {
         mutableStateOf(false)
@@ -309,7 +349,12 @@ fun ProjectItem(context: Context,navController: NavController, project: Projects
 
                         text = {
                             Column(modifier = Modifier.fillMaxWidth()) {
-                                TextButton(onClick = {},
+                                TextButton(onClick = {
+                                    PIDGlobal.selectedProjectId = project.pid.toString()
+                                    PIDGlobal.selectedProjectName= project.pname
+                                    showEditingOptions = false
+                                    navController.navigate("members")
+                                },modifier = Modifier.background(color = Color(127, 190, 255), shape = RoundedCornerShape(30.dp)),
                                     border = BorderStroke(1.dp, Color.Black),
                                 ) {
                                     Text(text = "Project Members",
@@ -319,14 +364,22 @@ fun ProjectItem(context: Context,navController: NavController, project: Projects
                                         textAlign = TextAlign.Center,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 18.sp,
-                                        color = Color(127, 190, 255)
+                                        color = Color.White
                                     )
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
                                 TextButton(onClick = {
-
-                                },
-
+                                    val db = Firebase.firestore
+                                    val vpin = Firebase.auth.uid?.take(5)
+                                    db.collection("Projects").document(project.pid.toString()).delete()
+                                    db.collection("Users").document(vpin.toString()).update(project.pid.toString(), FieldValue.delete())
+                                    showEditingOptions = false
+                                    navController.navigate("projects"){
+                                        popUpTo("projects") {
+                                            inclusive = true
+                                        }
+                                    }
+                                }, modifier = Modifier.background(color = Color(255, 127, 127), shape = RoundedCornerShape(30.dp)),
                                     border = BorderStroke(1.dp, Color.Black),
                                 ) {
                                     Text(text = "Delete Project",
@@ -336,7 +389,7 @@ fun ProjectItem(context: Context,navController: NavController, project: Projects
                                         textAlign = TextAlign.Center,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 18.sp,
-                                        color = Color(255, 127, 127)
+                                        color = Color.White
                                     )
                                 }
                             }

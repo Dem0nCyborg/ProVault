@@ -4,14 +4,19 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.List
@@ -26,6 +31,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.example.provault.ConnectRoute
+import com.example.provault.PIDGlobal
+import com.google.firebase.ktx.Firebase
+import com.google.firebase.storage.ktx.storage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -34,6 +42,10 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okio.IOException
 import org.json.JSONObject
 import java.io.File
+import java.util.UUID
+import com.google.firebase.storage.FirebaseStorage
+import com.google.firebase.storage.StorageReference
+import kotlinx.coroutines.tasks.await
 
 data class BottomNavRail(
     val title : String,
@@ -48,7 +60,13 @@ fun UploadAndRetrieve(
     navController : NavHostController
 ) {
 
+    val files = remember { mutableStateListOf<Pair<String, String>>() }
 
+    LaunchedEffect(Unit) {
+        val fetchedFiles = fetchFilesForSelectedProject()
+        files.clear()
+        files.addAll(fetchedFiles)
+    }
 
     val selectedIndex = remember { mutableStateOf(0) }
     val items = listOf(
@@ -72,13 +90,16 @@ fun UploadAndRetrieve(
         onResult = { uri ->
             fileUri = uri
         }
+
     )
 
     Scaffold(
         modifier = Modifier.fillMaxWidth(),
         topBar = {
             TopAppBar(
-                title = { Text("File Uploader") },
+                title = { Text(
+                    PIDGlobal.selectedProjectName.toString() + ": ${PIDGlobal.selectedProjectId}",
+                ) },
                 navigationIcon = {
                     IconButton(onClick = { navController.navigate("projects") }) {
                         Icon(
@@ -113,7 +134,6 @@ fun UploadAndRetrieve(
 
     }
 
-    // Trigger file retrieval on startup
     LaunchedEffect(Unit) {
         retrieveFilesFromPinata(jwt, scope) { files ->
             uploadedFiles = files
@@ -124,22 +144,44 @@ fun UploadAndRetrieve(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            .padding(top = 70.dp),
+        horizontalAlignment = Alignment.End,
+
     ) {
-        // Button to select file
-        Button(onClick = { filePickerLauncher.launch("*/*") }) {
-            Text("Select File")
+
+        LazyColumn {
+            items(files) { file ->
+                FileCard(fileName = file.first, context = context, fileLink = file.second)
+            }
+        }
+
+        FloatingActionButton(onClick = { filePickerLauncher.launch("*/*") }) {
+            Icon(imageVector = Icons.Filled.Add, contentDescription = "Select File")
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Upload button if file is selected
         fileUri?.let { uri ->
             val file = uriToFile(uri, context)
             file?.let {
-                Button(onClick = { uploadFileToPinata(it, jwt, scope) }) {
+                Button(onClick = {
+                    uploadFileToPinata(it, jwt, scope)
+                    //TODO : Change this if files doesn't go to Pinata
+                    uploadFileToFirebase(
+                        navController,
+                        context = context,
+                        fileUri = fileUri,
+                        onSuccess = { /* maybe refresh your list */ },
+                        onFailure = { e -> Log.e("Upload", "Failed: ${e.message}") }
+                    )
+                    navController.navigate("fileUploader"){
+                        popUpTo("fileUploader") {
+                            inclusive = true
+                        }
+                    }
+
+                }
+                    ) {
                     Text("Upload to Pinata")
                 }
             }
@@ -147,32 +189,7 @@ fun UploadAndRetrieve(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Display Grid of uploaded files
-        if (uploadedFiles.isNotEmpty()) {
-            LazyVerticalGrid(columns = GridCells.Fixed(2)) {
-                items(uploadedFiles.size) { index ->
-                    val (fileName, fileUrl) = uploadedFiles[index]
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .padding(8.dp)
-                            .clickable {
-                                openFile(context, fileUrl) // Open the file when clicked
-                            }
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(Icons.Default.Lock, contentDescription = "File Icon")
-                            BasicText(text = fileName)
-                        }
-                    }
-                }
-            }
         }
-
-        }
-
-
-
 }
 
 
@@ -258,4 +275,110 @@ fun openFile(context: Context, fileUrl: String) {
     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(fileUrl))
     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     context.startActivity(intent)
+}
+
+fun uploadFileToFirebase(
+    navController: NavHostController,
+    context: Context,
+    fileUri: Uri?,
+    onSuccess: () -> Unit,
+    onFailure: (Exception) -> Unit
+) {
+    if (fileUri == null) {
+        Toast.makeText(context, "No file selected!", Toast.LENGTH_SHORT).show()
+        return
+    }
+
+    val storageRef = Firebase.storage.reference
+    val folderName = PIDGlobal.selectedProjectId
+    val folderRef = storageRef.child("uploads/$folderName")
+
+    // Auto-create folder by referencing file path
+    val fileName = UUID.randomUUID().toString() + "-" + (fileUri.lastPathSegment ?: "file")
+    val fileRef = folderRef.child(fileName)
+
+    fileRef.putFile(fileUri)
+        .addOnSuccessListener {
+            Toast.makeText(context, "File uploaded successfully!", Toast.LENGTH_SHORT).show()
+            navController.navigate("fileUploader") {
+                popUpTo("fileUploader") {
+                    inclusive = true
+                }
+            }
+            onSuccess()
+        }
+        .addOnFailureListener { exception ->
+            Toast.makeText(context, "Upload failed: ${exception.message}", Toast.LENGTH_LONG).show()
+            onFailure(exception)
+        }
+}
+
+
+
+
+@Composable
+fun FileCard(fileName: String, context: Context, fileLink: String) {
+    val isImage = fileName.endsWith(".jpg", true) || fileName.endsWith(".png", true)
+    val fileIcon = when {
+        fileName.endsWith(".pdf", true) -> Icons.Default.Lock
+        isImage -> Icons.Default.Lock
+        else -> Icons.Default.Lock
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp)
+            .clickable { openFile1(context, fileLink) },
+        elevation = CardDefaults.cardElevation(4.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = fileIcon,
+                contentDescription = fileName,
+                modifier = Modifier.size(32.dp)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(text = fileName)
+        }
+    }
+}
+
+fun openFile1(context: Context, fileUrl: String) {
+    val intent = Intent(Intent.ACTION_VIEW).apply {
+        data = Uri.parse(fileUrl)
+        type = "*/*"
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    val chooser = Intent.createChooser(intent, "Open file with")
+    if (intent.resolveActivity(context.packageManager) != null) {
+        context.startActivity(chooser)
+    } else {
+        Toast.makeText(context, "No app found to open this file", Toast.LENGTH_SHORT).show()
+    }
+}
+
+
+suspend fun fetchFilesForSelectedProject(): List<Pair<String, String>> {
+    val storage = FirebaseStorage.getInstance()
+    val storageRef = storage.reference
+    val selectedProjectId = PIDGlobal.selectedProjectId
+    val projectFolderRef = storageRef.child("uploads/$selectedProjectId")
+
+    return try {
+        val result = projectFolderRef.listAll().await()
+        result.items.map { item ->
+            val fileName = item.name
+            val downloadUrl = item.downloadUrl.await().toString()
+            Pair(fileName, downloadUrl)
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+        emptyList()
+    }
 }

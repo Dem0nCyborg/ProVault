@@ -11,16 +11,19 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -33,6 +36,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -50,10 +54,12 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.navigation.NavHostController
 import com.example.provault.ConnectRoute
+import com.example.provault.PIDGlobal
 import com.example.provault.R
 import com.google.firebase.database.database
 import com.google.firebase.database.ktx.database
 import com.google.firebase.firestore.firestore
+import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -76,6 +82,41 @@ fun TodoList(
 
 
     val todolist by viewModel.todolist.observeAsState()
+    val db = Firebase.firestore
+    var todoList by remember { mutableStateOf<List<TODO>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+
+    LaunchedEffect(Unit) {
+        db.collection("Tasklist")
+            .whereEqualTo("pid", PIDGlobal.selectedProjectId)
+            .get()
+            .addOnSuccessListener { result ->
+                val list = result.map { doc ->
+                    TODO(
+                        id = doc.getLong("id")?.toInt() ?: 0,
+                        pid = doc.getString("pid") ?: "",
+                        title = doc.getString("title") ?: "",
+                        done = doc.getBoolean("done") ?: false
+                    )
+                }
+                todoList = list
+                isLoading = false
+            }
+            .addOnFailureListener {
+                isLoading = false
+            }
+    }
+
+    if (isLoading) {
+        CircularProgressIndicator()
+    } else {
+        LazyColumn {
+            items(todoList) { todo ->
+                Text(text = "${todo.title} (ID: ${todo.id}) - Done: ${todo.done}")
+            }
+        }
+    }
+
 
     val selectedIndex = remember { mutableStateOf(3) }
     val items = listOf(
@@ -145,17 +186,39 @@ fun TodoList(
                 Button(onClick = {
                     viewModel.addTODO(inputText)
                     inputText = ""
+                    navController.navigate("TODO"){
+                        popUpTo("TODO"){
+                            inclusive = true
+                        }
+                    }
                 }) {
                     Text(text = "Add")
                 }
             }
-            todolist?.let {
+            todoList?.let {
                 LazyColumn(
                     modifier = Modifier.padding(bottom = 50.dp),
                     content = {
                         itemsIndexed(it){ index:Int , Item: TODO ->
                             TodoItem(item = Item,
-                                onDelete = {viewModel.deleteTODO(Item.id)})
+                                onMarkDone = {
+                                    db.collection("Tasklist")
+                                        .whereEqualTo("id", Item.id)
+                                        .whereEqualTo("pid", PIDGlobal.selectedProjectId)
+                                        .get()
+                                        .addOnSuccessListener { result ->
+                                            for (doc in result) {
+                                                db.collection("Tasklist").document(doc.id)
+                                                    .update("done", true)
+                                            }
+                                            navController.navigate("TODO"){
+                                                popUpTo("TODO"){
+                                                    inclusive = true
+                                                }
+                                            }
+                                        }
+
+                                })
                         }
                     }
                 )
@@ -172,37 +235,36 @@ fun TodoList(
 }
 
 @Composable
-fun TodoItem(item : TODO,  onDelete : () -> Unit){
+fun TodoItem(item: TODO, onMarkDone: () -> Unit) {
+    val backgroundColor = if (item.done) Color(0xFFB9F6CA) else MaterialTheme.colorScheme.surfaceTint
+
     Row(
-        modifier = Modifier.padding(8.dp)
+        modifier = Modifier
+            .padding(8.dp)
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surfaceTint)
+            .background(backgroundColor)
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
-
     ) {
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
-            Text(text = SimpleDateFormat("HH:mm:aa, dd/mm/yyyy", Locale.ENGLISH).format(item.createdAt),
-                fontSize = 10.sp,
-                color = Color.LightGray
-            )
-
-
-            Text(text = item.title,
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = item.title,
                 fontSize = 20.sp,
                 color = Color.Black
-                )
-        }
-        IconButton(onClick = onDelete ) {
-            Icon(
-            painter = painterResource(id = R.drawable.delete),
-            contentDescription = "Delete",
-                tint = Color.White
             )
         }
+        if (!item.done) {
+            IconButton(onClick = onMarkDone) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .background(Color.Black, shape = RoundedCornerShape(50)),
+                    contentDescription = "Mark as done",
+                    tint = Color.White
+                )
+            }
+        }
     }
-
 }
