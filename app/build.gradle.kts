@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.jetbrainsKotlinAndroid)
@@ -21,7 +23,16 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        val properties = Properties()
+        properties.load(project.rootProject.file("local.properties").inputStream())
+
+        buildConfigField("String","Gemini_Api_Key","\"${properties["Gemini_Api_Key"]}\"")
+
     }
+
+    //val properties = Properties()
+
 
     buildTypes {
         release {
@@ -41,6 +52,7 @@ android {
     }
     buildFeatures {
         compose = true
+        android.buildFeatures.buildConfig = true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.1"
@@ -83,7 +95,7 @@ dependencies {
     implementation(libs.navigation.compose)
     implementation(libs.kotlinx.serialization.json)
     implementation("androidx.biometric:biometric:1.1.0")
-    implementation("com.google.ai.client.generativeai:generativeai:0.7.0")
+    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
     implementation ("com.squareup.okhttp3:okhttp:4.9.3")
     implementation ("androidx.activity:activity-compose:1.3.1")
     implementation ("com.squareup.okhttp3:okhttp:4.9.3")

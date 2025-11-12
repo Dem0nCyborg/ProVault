@@ -95,7 +95,7 @@ class MainActivity : AppCompatActivity() {
 
 
                     val navController = rememberNavController()
-                    NavHost(navController = navController, startDestination = "Biometric") {
+                    NavHost(navController = navController, startDestination = "biometric") {
                         composable("sign_in") {
                             val viewModel = viewModel<SignInViewModel>()
                             val state by viewModel.state.collectAsStateWithLifecycle()

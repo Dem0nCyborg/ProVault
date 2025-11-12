@@ -64,6 +64,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -99,6 +100,7 @@ fun ProjectListScreen(viewModel : UserDBViewModel = viewModel(),
     }
 
     if (showExitDialog) {
+        val activity = (LocalContext.current as? Activity)
         AlertDialog(
             onDismissRequest = { showExitDialog = false },
             title = { Text("Exit App") },
@@ -107,7 +109,7 @@ fun ProjectListScreen(viewModel : UserDBViewModel = viewModel(),
                 TextButton(onClick = {
                     showExitDialog = false
                     // Gracefully finish the app
-                    (context as? Activity)?.finishAffinity()
+                    activity?.finishAffinity()
                 }) {
                     Text("Exit")
                 }
