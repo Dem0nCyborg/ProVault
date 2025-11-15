@@ -85,26 +85,25 @@ It demonstrates how modern apps integrate:
 
 ---
 
-# 🖼️ Screenshots
+## 📱 App Screenshots
 
+### 🔐 Sign In Screen
+<img src="Screenshot_20251114-114747.ProVault.png" width="350" />
 
-### 🔑 Authentication  
-![Auth](app/src/main/res/drawable/Screenshot_20251114-114747.ProVault.png)
+### 🏠 Projects Dashboard
+<img src="Screenshot_20251114-201051.ProVault.png" width="350" />
 
-### 🏠 Projects Dashboard  
-![Dashboard](app/src/main/res/drawable/Screenshot_20251114-114747.ProVault.png)
+### 📁 File Upload & Retrieve
+<img src="Screenshot_20251114-201152.ProVault.png" width="350" />
 
-### 📤 File Upload  
-![Upload](screenshots/file_upload.png)
+### 🤖 AI Assistant
+<img src="Screenshot_20251114-201357.ProVault.png" width="350" />
 
-### 🤖 Gemini AI Screen  
-![AI](screenshots/ai_screen.png)
+### 🎥 Video Call Screen
+<img src="Screenshot_20251112_120338.png" width="350" />
 
-### 🎥 Video Call  
-![Video](screenshots/video_call.png)
-
-### 📝 To-Do Manager  
-![Todo](screenshots/todo.png)
+### 🎥 Task List
+<img src="Screenshot_20251114-201427.ProVault.png" width="350" />
 
 ---
 
