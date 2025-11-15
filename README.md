@@ -1,6 +1,5 @@
 # 🟦 ProVault — Decentralized Collaboration & AI Productivity App
 
-![Banner](screenshots/banner.png)
 
 <p align="center">
 
