@@ -27,12 +27,6 @@ A modern Android app that brings together project collaboration, file storage, A
 
 ---
 
-## 🎞️ Demo Preview (GIF)
-
-![Demo](screenshots/demo.gif)
-
----
-
 # 📦 Overview
 
 ProVault is a next-generation productivity and collaboration app designed for secure digital workspaces.  
