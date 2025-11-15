@@ -89,10 +89,10 @@ It demonstrates how modern apps integrate:
 
 
 ### 🔑 Authentication  
-![Auth](screenshots/login.png)
+![Auth](app/src/main/res/drawable/Screenshot_20251114-114747.ProVault.png)
 
 ### 🏠 Projects Dashboard  
-![Dashboard](screenshots/projects.png)
+![Dashboard](app/src/main/res/drawable/Screenshot_20251114-114747.ProVault.png)
 
 ### 📤 File Upload  
 ![Upload](screenshots/file_upload.png)
